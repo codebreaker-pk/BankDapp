@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bank Smart Contract</title>
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.8.2/dist/web3.min.js"></script>
+</head>
+<body>
+  <h1>Bank Smart Contract</h1>
+  <p>Interact with the Bank smart contract deployed on Ganache.</p>
+
+  <!-- Create Account -->
+  <div>
+    <h3>Create Account</h3>
+    <button id="createAccount">Create Account</button>
+    <p id="createAccountStatus"></p>
+  </div>
+
+  <!-- Deposit -->
+  <div>
+    <h3>Deposit Funds</h3>
+    <input type="text" id="depositAmount" placeholder="Enter amount in ETH">
+    <button id="deposit">Deposit</button>
+    <p id="depositStatus"></p>
+  </div>
+
+  <!-- Withdraw -->
+  <div>
+    <h3>Withdraw Funds</h3>
+    <input type="text" id="withdrawAmount" placeholder="Enter amount in ETH">
+    <button id="withdraw">Withdraw</button>
+    <p id="withdrawStatus"></p>
+  </div>
+
+  <!-- Transfer -->
+  <div>
+    <h3>Transfer Funds</h3>
+    <input type="text" id="transferTo" placeholder="Recipient Address">
+    <input type="text" id="transferAmount" placeholder="Enter amount in ETH">
+    <button id="transfer">Transfer</button>
+    <p id="transferStatus"></p>
+  </div>
+
+  <!-- Get Balance -->
+  <div>
+    <h3>Get Balance</h3>
+    <button id="getBalance">Check Balance</button>
+    <p id="balance"></p>
+  </div>
+
+  <script>
+    const contractAddress = "0x96D99c7b0696702a78A3D244acA6448Ba8D9c14c"; // Replace with your contract address
+    const abi = [
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "accountHolder",
+          "type": "address"
+        }
+      ],
+      "name": "AccountCreated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "accountHolder",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "Deposit",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "from",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "to",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "Transfer",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "accountHolder",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "Withdrawal",
+      "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "createAccount",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "deposit",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function",
+      "payable": true
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "withdraw",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "to",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "transfer",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getBalance",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function",
+      "constant": true
+    }
+    ];
+
+    let web3, contract, account;
+
+    window.addEventListener('load', async () => {
+      // Check if Web3 is available
+      if (typeof window.ethereum !== 'undefined') {
+        web3 = new Web3(window.ethereum);
+        try {
+          // Request account access
+          await ethereum.request({ method: 'eth_requestAccounts' });
+          const accounts = await web3.eth.getAccounts();
+          account = accounts[0];
+          console.log("Connected account:", account);
+
+          contract = new web3.eth.Contract(abi, contractAddress);
+
+          // Setup event listeners
+          setupEventListeners();
+        } catch (error) {
+          console.error("User denied account access:", error);
+        }
+      } else {
+        alert('Please install MetaMask to use this app.');
+      }
+    });
+
+    // Setup Event Listeners
+    function setupEventListeners() {
+      // Create Account
+      document.getElementById('createAccount').addEventListener('click', async () => {
+        try {
+          await contract.methods.createAccount().send({ from: account });
+          document.getElementById('createAccountStatus').innerText = "Account created successfully!";
+        } catch (error) {
+          document.getElementById('createAccountStatus').innerText = `Error: ${error.message}`;
+        }
+      });
+
+      // Deposit Funds
+      document.getElementById('deposit').addEventListener('click', async () => {
+        const amount = document.getElementById('depositAmount').value;
+        try {
+          await contract.methods.deposit().send({ from: account, value: web3.utils.toWei(amount, "ether") });
+          document.getElementById('depositStatus').innerText = "Deposit successful!";
+        } catch (error) {
+          document.getElementById('depositStatus').innerText = `Error: ${error.message}`;
+        }
+      });
+
+      // Withdraw Funds
+      document.getElementById('withdraw').addEventListener('click', async () => {
+        const amount = document.getElementById('withdrawAmount').value;
+        try {
+          await contract.methods.withdraw(web3.utils.toWei(amount, "ether")).send({ from: account });
+          document.getElementById('withdrawStatus').innerText = "Withdrawal successful!";
+        } catch (error) {
+          document.getElementById('withdrawStatus').innerText = `Error: ${error.message}`;
+        }
+      });
+
+      // Transfer Funds
+      document.getElementById('transfer').addEventListener('click', async () => {
+        const to = document.getElementById('transferTo').value;
+        const amount = document.getElementById('transferAmount').value;
+        try {
+          await contract.methods.transfer(to, web3.utils.toWei(amount, "ether")).send({ from: account });
+          document.getElementById('transferStatus').innerText = "Transfer successful!";
+        } catch (error) {
+          document.getElementById('transferStatus').innerText = `Error: ${error.message}`;
+        }
+      });
+
+      // Get Balance
+      document.getElementById('getBalance').addEventListener('click', async () => {
+        try {
+          const balance = await contract.methods.getBalance().call({ from: account });
+          document.getElementById('balance').innerText = `Your balance: ${web3.utils.fromWei(balance, "ether")} ETH`;
+        } catch (error) {
+          document.getElementById('balance').innerText = `Error: ${error.message}`;
+        }
+      });
+    }
+  </script>
+</body>
+</html>
+
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bank Smart Contract</title>
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.8.2/dist/web3.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background-color: #f4f4f4;
+      margin: 20px;
+    }
+    div {
+      background: white;
+      margin: 20px auto;
+      padding: 15px;
+      width: 300px;
+      border-radius: 8px;
+      box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+    }
+    input {
+      width: 90%;
+      padding: 8px;
+      margin: 5px 0;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    p {
+      font-weight: bold;
+      color: green;
+    }
+  </style>
+</head>
